@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PlanPulse · FP&A</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f3f0;
+  --surface:#ffffff;
+  --surface2:#eeece8;
+  --surface3:#e6e3de;
+  --border:#dedad3;
+  --border2:#ccc8c0;
+  --text:#18170f;
+  --text2:#6a6760;
+  --text3:#a09d97;
+  --red:#bf2c1a;
+  --red-bg:#fdf0ee;
+  --green:#1a6640;
+  --green-bg:#edf6f1;
+  --blue:#1a4e8a;
+  --blue-bg:#eef3fb;
+  --amber:#7a5108;
+  --amber-bg:#fdf5e6;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'IBM Plex Sans',sans-serif;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13px;line-height:1.5}
+
+/* HEADER */
+header{background:var(--surface);border-bottom:1px solid var(--border);height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:200}
+.logo{display:flex;align-items:center;gap:8px}
+.logo-icon{width:26px;height:26px;background:var(--text);border-radius:5px;display:grid;place-items:center}
+.logo-icon svg{width:14px;height:14px;fill:white}
+.logo-name{font-size:14px;font-weight:600;letter-spacing:-0.02em}
+.logo-name em{color:var(--text3);font-style:normal;font-weight:400}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.live-badge{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:var(--green);background:var(--green-bg);border:1px solid #b4dfc8;border-radius:20px;padding:2px 8px;letter-spacing:0.04em;text-transform:uppercase}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+.hdr-meta{font-size:11px;color:var(--text3);font-family:var(--mono)}
+
+/* LAYOUT */
+.app{display:grid;grid-template-columns:280px 1fr;min-height:calc(100vh - 52px)}
+
+/* SIDEBAR */
+aside{background:var(--surface);border-right:1px solid var(--border);padding:20px 16px;overflow-y:auto;position:sticky;top:52px;height:calc(100vh - 52px)}
+.aside-section{margin-bottom:20px}
+.aside-title{font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.driver-row{margin-bottom:14px}
+.driver-label{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.driver-name{font-size:11px;color:var(--text2)}
+.driver-val{font-size:12px;font-weight:600;font-family:var(--mono);color:var(--text)}
+.driver-val.pos{color:var(--green)}
+.driver-val.neg{color:var(--red)}
+input[type=range]{width:100%;height:3px;accent-color:var(--text);cursor:pointer;margin-bottom:2px}
+.driver-bounds{display:flex;justify-content:space-between;font-size:9px;color:var(--text3);font-family:var(--mono)}
+.plan-line{font-size:9px;color:var(--text3);margin-top:1px}
+.plan-line span{color:var(--text2)}
+
+.reset-btn{width:100%;padding:7px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-family:var(--sans);font-size:11px;font-weight:500;color:var(--text2);cursor:pointer;transition:.15s}
+.reset-btn:hover{background:var(--surface3);color:var(--text)}
+
+/* MACRO PILL */
+.macro-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)}
+.macro-row:last-child{border-bottom:none}
+.macro-key{font-size:10px;color:var(--text3)}
+.macro-v{font-size:12px;font-weight:600;font-family:var(--mono)}
+.macro-v.up{color:var(--green)}
+.macro-v.dn{color:var(--red)}
+
+/* MAIN */
+main{padding:20px;overflow-y:auto}
+
+/* SECTION */
+.sec-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;margin-top:20px}
+.sec-head:first-child{margin-top:0}
+.sec-label{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);white-space:nowrap}
+.sec-rule{flex:1;height:1px;background:var(--border)}
+
+/* KPI ROW */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;position:relative;overflow:hidden}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi.pos::after{background:var(--green)}
+.kpi.neg::after{background:var(--red)}
+.kpi.neu::after{background:var(--blue)}
+.kpi-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:6px}
+.kpi-num{font-size:22px;font-weight:600;font-family:var(--mono);letter-spacing:-.02em;color:var(--text);margin-bottom:4px}
+.kpi-tag{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;padding:2px 6px;border-radius:3px}
+.kpi-tag.pos{background:var(--green-bg);color:var(--green)}
+.kpi-tag.neg{background:var(--red-bg);color:var(--red)}
+.kpi-tag.neu{background:var(--blue-bg);color:var(--blue)}
+.kpi-tag.warn{background:var(--amber-bg);color:var(--amber)}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px}
+.card-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px}
+.card-sub{font-size:10px;color:var(--text3);margin-bottom:14px}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.g3{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px;margin-bottom:12px}
+.mb{margin-bottom:12px}
+.chart-wrap{position:relative;width:100%}
+.h200{height:200px}.h180{height:180px}.h160{height:160px}
+
+/* WATERFALL */
+#waterfall-container{overflow-x:auto}
+.waterfall-svg{min-width:500px;width:100%}
+
+/* SENSITIVITY TABLE */
+.sens-wrap{overflow-x:auto}
+.sens-table{border-collapse:collapse;font-family:var(--mono);font-size:11px;width:100%}
+.sens-table th{background:var(--surface2);padding:6px 10px;text-align:center;font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);border:1px solid var(--border)}
+.sens-table td{padding:6px 10px;text-align:center;border:1px solid var(--border);font-size:11px;font-weight:500;transition:background .2s}
+.sens-table .row-label{background:var(--surface2);color:var(--text2);font-size:9px;font-weight:600;text-align:left;white-space:nowrap}
+.sens-cell-pos-hi{background:#c8e6d6;color:#0f4a2a}
+.sens-cell-pos-md{background:#dff0e8;color:#1a6640}
+.sens-cell-pos-lo{background:#f0f8f4;color:#2d8a5a}
+.sens-cell-neu{background:#f7f6f3;color:var(--text2)}
+.sens-cell-neg-lo{background:#fce8e5;color:#8a2010}
+.sens-cell-neg-md{background:#f9d0cb;color:#7a1a0c}
+.sens-cell-neg-hi{background:#f5b5ae;color:#6a0f07}
+
+/* COMMENTARY */
+.commentary-box{background:var(--blue-bg);border:1px solid #c0d3ee;border-radius:8px;padding:14px;margin-top:10px;min-height:80px;position:relative}
+.commentary-label{font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);margin-bottom:8px}
+.commentary-text{font-size:12px;color:var(--text);line-height:1.7;white-space:pre-wrap}
+.commentary-loading{font-size:11px;color:var(--text3);font-style:italic}
+.gen-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--text);color:white;border:none;border-radius:6px;font-family:var(--sans);font-size:11px;font-weight:500;cursor:pointer;transition:.15s;margin-top:10px}
+.gen-btn:hover{background:#333}
+.gen-btn:disabled{opacity:.5;cursor:not-allowed}
+.gen-btn svg{width:12px;height:12px;fill:white}
+
+/* LEGEND */
+.legend{display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.leg{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text2)}
+.leg-sq{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.leg-line{width:14px;height:0;border-top:2px dashed var(--text3)}
+
+/* VARIANCE TABLE */
+.vtable{width:100%;border-collapse:collapse}
+.vtable th{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);font-weight:500;padding:0 8px 8px;text-align:left;border-bottom:1px solid var(--border)}
+.vtable th:not(:first-child){text-align:right}
+.vtable td{padding:8px;border-bottom:1px solid var(--border);vertical-align:middle}
+.vtable tr:last-child td{border-bottom:none}
+.vtable td:not(:first-child){text-align:right;font-family:var(--mono);font-size:11px}
+.tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;font-family:var(--mono)}
+.tag.p{background:var(--green-bg);color:var(--green)}
+.tag.n{background:var(--red-bg);color:var(--red)}
+.tag.w{background:var(--amber-bg);color:var(--amber)}
+
+/* SENSITIVITY AXIS LABELS */
+.sens-axis{font-size:10px;color:var(--text3);margin-bottom:6px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 14 14"><rect x="0" y="7" width="3" height="7"/><rect x="4" y="4" width="3" height="10"/><rect x="8" y="1" width="3" height="13"/><rect x="12" y="5" width="2" height="9" opacity=".4"/></svg>
+    </div>
+    <span class="logo-name">PlanPulse <em>· FP&amp;A Intelligence</em></span>
+  </div>
+  <div class="hdr-right">
+    <span class="hdr-meta" id="hdr-time">—</span>
+    <span class="hdr-meta" id="hdr-fred">FRED · loading…</span>
+    <div class="live-badge"><div class="live-dot"></div>Live</div>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- SIDEBAR: DRIVER CONTROLS -->
+  <aside>
+    <div class="aside-section">
+      <div class="aside-title">Business Drivers</div>
+
+      <div class="driver-row">
+        <div class="driver-label">
+          <span class="driver-name">Renewal Rate</span>
+          <span class="driver-val" id="lbl-renewal">92.0%</span>
+        </div>
+        <input type="range" id="sl-renewal" min="80" max="100" step="0.5" value="92"/>
+        <div class="driver-bounds"><span>80%</span><span>100%</span></div>
+        <div class="plan-line">Plan: <span>91.0%</span></div>
+      </div>
+
+      <div class="driver-row">
+        <div class="driver-label">
+          <span class="driver-name">New Logos (annual)</span>
+          <span class="driver-val" id="lbl-logos">240</span>
+        </div>
+        <input type="range" id="sl-logos" min="150" max="400" step="5" value="240"/>
+        <div class="driver-bounds"><span>150</span><span>400</span></div>
+        <div class="plan-line">Plan: <span>260</span></div>
+      </div>
+
+      <div class="driver-row">
+        <div class="driver-label">
+          <span class="driver-name">Avg Contract Value ($k)</span>
+          <span class="driver-val" id="lbl-acv">$48k</span>
+        </div>
+        <input type="range" id="sl-acv" min="30" max="80" step="1" value="48"/>
+        <div class="driver-bounds"><span>$30k</span><span>$80k</span></div>
+        <div class="plan-line">Plan: <span>$50k</span></div>
+      </div>
+
+      <div class="driver-row">
+        <div class="driver-label">
+          <span class="driver-name">Seat Expansion Rate</span>
+          <span class="driver-val" id="lbl-expansion">8.0%</span>
+        </div>
+        <input type="range" id="sl-expansion" min="0" max="25" step="0.5" value="8"/>
+        <div class="driver-bounds"><span>0%</span><span>25%</span></div>
+        <div class="plan-line">Plan: <span>10.0%</span></div>
+      </div>
+
+      <div class="driver-row">
+        <div class="driver-label">
+          <span class="driver-name">Churn Rate</span>
+          <span class="driver-val" id="lbl-churn">6.0%</span>
+        </div>
+        <input type="range" id="sl-churn" min="0" max="20" step="0.5" value="6"/>
+        <div class="driver-bounds"><span>0%</span><span>20%</span></div>
+        <div class="plan-line">Plan: <span>7.0%</span></div>
+      </div>
+
+      <div class="driver-row">
+        <div class="driver-label">
+          <span class="driver-name">Price Increase (%)</span>
+          <span class="driver-val" id="lbl-price">3.0%</span>
+        </div>
+        <input type="range" id="sl-price" min="0" max="15" step="0.5" value="3"/>
+        <div class="driver-bounds"><span>0%</span><span>15%</span></div>
+        <div class="plan-line">Plan: <span>3.0%</span></div>
+      </div>
+
+      <button class="reset-btn" onclick="resetDrivers()">↺ Reset to plan</button>
+    </div>
+
+    <div class="aside-section">
+      <div class="aside-title">Macro · FRED Live</div>
+      <div class="macro-row"><span class="macro-key">US GDP Growth</span><span class="macro-v up" id="m-gdp">—</span></div>
+      <div class="macro-row"><span class="macro-key">Software PPI</span><span class="macro-v" id="m-ppi">—</span></div>
+      <div class="macro-row"><span class="macro-key">Tech Employment</span><span class="macro-v" id="m-tech">—</span></div>
+      <div class="macro-row"><span class="macro-key">Fed Funds Rate</span><span class="macro-v" id="m-ffr">—</span></div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main>
+
+    <!-- KPIs -->
+    <div class="kpi-row">
+      <div class="kpi pos">
+        <div class="kpi-lbl">Total ARR</div>
+        <div class="kpi-num" id="kpi-arr">—</div>
+        <div class="kpi-tag pos" id="kpi-arr-tag">vs. plan</div>
+      </div>
+      <div class="kpi" id="kpi-nr-card">
+        <div class="kpi-lbl">Net Revenue Retention</div>
+        <div class="kpi-num" id="kpi-nrr">—</div>
+        <div class="kpi-tag" id="kpi-nrr-tag">—</div>
+      </div>
+      <div class="kpi" id="kpi-new-card">
+        <div class="kpi-lbl">New Logo Revenue</div>
+        <div class="kpi-num" id="kpi-new">—</div>
+        <div class="kpi-tag" id="kpi-new-tag">vs. plan</div>
+      </div>
+      <div class="kpi neu">
+        <div class="kpi-lbl">Forecast Confidence</div>
+        <div class="kpi-num" id="kpi-conf">—</div>
+        <div class="kpi-tag neu" id="kpi-conf-tag">macro-adjusted</div>
+      </div>
+    </div>
+
+    <!-- WATERFALL + MONTHLY -->
+    <div class="sec-head"><span class="sec-label">Revenue bridge · plan to forecast</span><div class="sec-rule"></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1.4fr 1.4fr;gap:10px;margin-bottom:12px">
+
+      <!-- Plan vs Forecast summary -->
+      <div class="card" style="display:flex;flex-direction:column;gap:0">
+        <div class="card-title">Plan vs. Forecast</div>
+        <div class="card-sub">Full-year ARR · $M</div>
+        <div class="chart-wrap" style="height:160px"><canvas id="pvfChart" role="img" aria-label="Plan vs forecast ARR comparison"></canvas></div>
+        <div id="pvf-delta" style="margin-top:10px;padding:10px;background:var(--surface2);border-radius:6px;text-align:center">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:3px">Variance vs. Plan</div>
+          <div id="pvf-delta-val" style="font-size:20px;font-weight:600;font-family:var(--mono)">—</div>
+          <div id="pvf-delta-pct" style="font-size:11px;color:var(--text3);margin-top:1px">—</div>
+        </div>
+      </div>
+
+      <!-- Variance bridge — components only, own scale -->
+      <div class="card">
+        <div class="card-title">Variance Bridge</div>
+        <div class="card-sub">What's driving the gap · each component at its own scale</div>
+        <div class="chart-wrap h200"><canvas id="wfChart" role="img" aria-label="Revenue variance bridge by driver component"></canvas></div>
+      </div>
+
+      <!-- Monthly -->
+      <div class="card">
+        <div class="card-title">Monthly Revenue Forecast</div>
+        <div class="card-sub">Driver-computed · updates with slider changes</div>
+        <div class="legend">
+          <div class="leg"><div class="leg-sq" style="background:#1a4e8a"></div>Computed forecast</div>
+          <div class="leg"><div class="leg-line"></div>Plan</div>
+        </div>
+        <div class="chart-wrap h200"><canvas id="monthlyChart" role="img" aria-label="Monthly revenue forecast vs plan"></canvas></div>
+      </div>
+    </div>
+
+    <!-- PRICE VOLUME MIX + SENSITIVITY -->
+    <div class="sec-head"><span class="sec-label">Variance decomposition · price / volume / mix</span><div class="sec-rule"></div></div>
+    <div class="g3 mb">
+      <div class="card">
+        <div class="card-title">Price–Volume–Mix Analysis</div>
+        <div class="card-sub">Variance vs. plan decomposed by effect</div>
+        <div class="chart-wrap h180"><canvas id="pvmChart" role="img" aria-label="Price volume mix variance decomposition"></canvas></div>
+      </div>
+      <div class="card" style="grid-column:span 2">
+        <div class="card-title">Sensitivity Table — ARR by Renewal × ACV</div>
+        <div class="card-sub">Full-year ARR ($M) across driver grid · green = above plan · red = below</div>
+        <div class="sens-axis">↑ Renewal Rate &nbsp;|&nbsp; ACV →</div>
+        <div class="sens-wrap"><table class="sens-table" id="sens-table"></table></div>
+      </div>
+    </div>
+
+    <!-- STREAM VARIANCE + AI COMMENTARY -->
+    <div class="sec-head"><span class="sec-label">Revenue stream variance · current drivers</span><div class="sec-rule"></div></div>
+    <div class="g2 mb">
+      <div class="card">
+        <div class="card-title">Stream-Level Breakdown</div>
+        <div class="card-sub">Computed actuals vs. plan · $M</div>
+        <table class="vtable" id="stream-table"></table>
+      </div>
+      <div class="card">
+        <div class="card-title">AI Variance Commentary</div>
+        <div class="card-sub">Groq LLM · senior FP&A analyst synthesis</div>
+        <div class="commentary-box">
+          <div class="commentary-label">Analysis</div>
+          <div class="commentary-text" id="commentary-text">Adjust drivers and click Generate to produce an AI-written variance explanation based on current model state and live macro data.</div>
+        </div>
+        <button class="gen-btn" id="gen-btn" onclick="generateCommentary()">
+          <svg viewBox="0 0 12 12"><path d="M6 0L7.5 4.5L12 6L7.5 7.5L6 12L4.5 7.5L0 6L4.5 4.5Z"/></svg>
+          Generate FP&A Commentary
+        </button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ─── PLAN CONSTANTS ───────────────────────────────────────────────────────────
+const PLAN = {
+  renewalRate: 91.0,
+  newLogos: 260,
+  acv: 50,
+  expansionRate: 10.0,
+  churnRate: 7.0,
+  priceIncrease: 3.0,
+  baseARR: 580, // $M starting ARR
+};
+
+// Live macro state
+let macro = { gdp: null, ppi: null, tech: null, ffr: null };
+let monthlyChartInst = null, pvmChartInst = null, wfChartInst = null;
+
+// ─── DRIVER READS ─────────────────────────────────────────────────────────────
+function drivers() {
+  return {
+    renewalRate:   parseFloat(document.getElementById('sl-renewal').value),
+    newLogos:      parseInt(document.getElementById('sl-logos').value),
+    acv:           parseInt(document.getElementById('sl-acv').value),
+    expansionRate: parseFloat(document.getElementById('sl-expansion').value),
+    churnRate:     parseFloat(document.getElementById('sl-churn').value),
+    priceIncrease: parseFloat(document.getElementById('sl-price').value),
+  };
+}
+
+function resetDrivers() {
+  document.getElementById('sl-renewal').value   = PLAN.renewalRate;
+  document.getElementById('sl-logos').value     = PLAN.newLogos;
+  document.getElementById('sl-acv').value       = PLAN.acv;
+  document.getElementById('sl-expansion').value = PLAN.expansionRate;
+  document.getElementById('sl-churn').value     = PLAN.churnRate;
+  document.getElementById('sl-price').value     = PLAN.priceIncrease;
+  updateLabels();
+  recalc();
+}
+
+function updateLabels() {
+  const d = drivers();
+  const r = d.renewalRate, rp = PLAN.renewalRate;
+  const lp = d.acv > PLAN.acv ? 'pos' : d.acv < PLAN.acv ? 'neg' : '';
+  document.getElementById('lbl-renewal').textContent  = d.renewalRate.toFixed(1) + '%';
+  document.getElementById('lbl-renewal').className    = 'driver-val ' + (d.renewalRate > PLAN.renewalRate ? 'pos' : d.renewalRate < PLAN.renewalRate ? 'neg' : '');
+  document.getElementById('lbl-logos').textContent    = d.newLogos;
+  document.getElementById('lbl-logos').className      = 'driver-val ' + (d.newLogos > PLAN.newLogos ? 'pos' : d.newLogos < PLAN.newLogos ? 'neg' : '');
+  document.getElementById('lbl-acv').textContent      = '$' + d.acv + 'k';
+  document.getElementById('lbl-acv').className        = 'driver-val ' + lp;
+  document.getElementById('lbl-expansion').textContent = d.expansionRate.toFixed(1) + '%';
+  document.getElementById('lbl-expansion').className  = 'driver-val ' + (d.expansionRate > PLAN.expansionRate ? 'pos' : d.expansionRate < PLAN.expansionRate ? 'neg' : '');
+  document.getElementById('lbl-churn').textContent    = d.churnRate.toFixed(1) + '%';
+  document.getElementById('lbl-churn').className      = 'driver-val ' + (d.churnRate < PLAN.churnRate ? 'pos' : d.churnRate > PLAN.churnRate ? 'neg' : '');
+  document.getElementById('lbl-price').textContent    = d.priceIncrease.toFixed(1) + '%';
+  document.getElementById('lbl-price').className      = 'driver-val ' + (d.priceIncrease > PLAN.priceIncrease ? 'pos' : d.priceIncrease < PLAN.priceIncrease ? 'neg' : '');
+}
+
+// ─── REVENUE MODEL ────────────────────────────────────────────────────────────
+function computeARR(d) {
+  const renewal    = PLAN.baseARR * (d.renewalRate / 100);
+  const expansion  = renewal * (d.expansionRate / 100);
+  const newLogo    = d.newLogos * d.acv / 1000; // convert to $M
+  const churnLoss  = PLAN.baseARR * (d.churnRate / 100);
+  const priceLift  = PLAN.baseARR * (d.priceIncrease / 100);
+  return renewal + expansion + newLogo - churnLoss + priceLift;
+}
+
+function computePlanARR() { return computeARR(PLAN); }
+
+function computeMonthly(d) {
+  // Ramp: Q1 lighter, Q4 heavier (typical SaaS seasonality for software tools)
+  const total = computeARR(d);
+  const seasonal = [0.074,0.077,0.082,0.083,0.084,0.086,0.084,0.083,0.086,0.088,0.085,0.088];
+  return seasonal.map(w => parseFloat((total * w * 12).toFixed(2)));
+}
+
+function computePlanMonthly() { return computeMonthly(PLAN); }
+
+// ─── PVM DECOMPOSITION ────────────────────────────────────────────────────────
+function computePVM(d) {
+  const planARR = computePlanARR();
+  // Price effect: price increase delta on base
+  const priceEffect = PLAN.baseARR * ((d.priceIncrease - PLAN.priceIncrease) / 100);
+  // Volume effect: new logo delta
+  const volEffect = (d.newLogos - PLAN.newLogos) * d.acv / 1000;
+  // Mix effect: ACV delta on existing logos
+  const mixEffect = PLAN.newLogos * (d.acv - PLAN.acv) / 1000;
+  // Retention effect: renewal + churn + expansion combined
+  const retEffect = PLAN.baseARR * (
+    (d.renewalRate - PLAN.renewalRate) / 100 +
+    (PLAN.churnRate - d.churnRate) / 100 +
+    (d.expansionRate - PLAN.expansionRate) / 100
+  );
+  const totalVar = computeARR(d) - planARR;
+  return { priceEffect, volEffect, mixEffect, retEffect, totalVar };
+}
+
+// ─── WATERFALL DATA ───────────────────────────────────────────────────────────
+function buildWaterfall(d) {
+  const plan  = computePlanARR();
+  const pvm   = computePVM(d);
+  // bars: [label, value, isTotal, runningStart]
+  let run = plan;
+  const bars = [
+    { label: 'Plan ARR', value: plan, total: true, start: 0 },
+    { label: 'Renewal', value: pvm.retEffect, total: false, start: run },
+    { label: 'New Logo\nVolume', value: pvm.volEffect, total: false, start: run + pvm.retEffect },
+    { label: 'Price\nLift', value: pvm.priceEffect, total: false, start: run + pvm.retEffect + pvm.volEffect },
+    { label: 'ACV\nMix', value: pvm.mixEffect, total: false, start: run + pvm.retEffect + pvm.volEffect + pvm.priceEffect },
+    { label: 'Forecast\nARR', value: computeARR(d), total: true, start: 0 },
+  ];
+  return bars;
+}
+
+// ─── SENSITIVITY TABLE ────────────────────────────────────────────────────────
+function buildSensitivity() {
+  const renewalRange = [84, 87, 90, 92, 94, 96, 98];
+  const acvRange     = [36, 40, 44, 48, 52, 56, 60];
+  const planARR      = computePlanARR();
+
+  let html = '<tr><th class="row-label">Renewal \\ ACV</th>';
+  acvRange.forEach(a => { html += `<th>$${a}k</th>`; });
+  html += '</tr>';
+
+  renewalRange.forEach(rr => {
+    html += `<tr><td class="row-label">${rr}%</td>`;
+    acvRange.forEach(a => {
+      const d2 = { ...drivers(), renewalRate: rr, acv: a };
+      const arr = computeARR(d2);
+      const delta = ((arr - planARR) / planARR * 100);
+      let cls = 'sens-cell-neu';
+      if (delta > 8)       cls = 'sens-cell-pos-hi';
+      else if (delta > 3)  cls = 'sens-cell-pos-md';
+      else if (delta > 0)  cls = 'sens-cell-pos-lo';
+      else if (delta > -3) cls = 'sens-cell-neg-lo';
+      else if (delta > -8) cls = 'sens-cell-neg-md';
+      else                 cls = 'sens-cell-neg-hi';
+      html += `<td class="${cls}">$${arr.toFixed(0)}M</td>`;
+    });
+    html += '</tr>';
+  });
+  document.getElementById('sens-table').innerHTML = html;
+}
+
+// ─── STREAM TABLE ─────────────────────────────────────────────────────────────
+function buildStreamTable(d) {
+  const pvm   = computePVM(d);
+  const planARR = computePlanARR();
+  const actARR  = computeARR(d);
+
+  const streams = [
+    { name: 'Renewal Base',      plan: PLAN.baseARR * PLAN.renewalRate / 100,    actual: PLAN.baseARR * d.renewalRate / 100 },
+    { name: 'Seat Expansion',    plan: PLAN.baseARR * PLAN.renewalRate / 100 * PLAN.expansionRate / 100, actual: PLAN.baseARR * d.renewalRate / 100 * d.expansionRate / 100 },
+    { name: 'New Logo Revenue',  plan: PLAN.newLogos * PLAN.acv / 1000,          actual: d.newLogos * d.acv / 1000 },
+    { name: 'Price Increase',    plan: PLAN.baseARR * PLAN.priceIncrease / 100,  actual: PLAN.baseARR * d.priceIncrease / 100 },
+    { name: 'Churn (loss)',      plan: -(PLAN.baseARR * PLAN.churnRate / 100),   actual: -(PLAN.baseARR * d.churnRate / 100) },
+  ];
+
+  let html = '<thead><tr><th>Stream</th><th>Plan $M</th><th>Forecast $M</th><th>Δ $M</th><th>Δ %</th></tr></thead><tbody>';
+  streams.forEach(s => {
+    const v   = s.actual - s.plan;
+    const pct = (v / Math.abs(s.plan) * 100).toFixed(1);
+    const sign = v >= 0 ? '+' : '';
+    const cls = Math.abs(parseFloat(pct)) < 1 ? 'w' : v >= 0 ? 'p' : 'n';
+    html += `<tr>
+      <td style="color:var(--text);font-weight:500">${s.name}</td>
+      <td style="color:var(--text2)">$${Math.abs(s.plan).toFixed(1)}</td>
+      <td>$${Math.abs(s.actual).toFixed(1)}</td>
+      <td style="color:${v >= 0 ? 'var(--green)' : 'var(--red)'}">${sign}$${Math.abs(v).toFixed(1)}</td>
+      <td><span class="tag ${cls}">${sign}${pct}%</span></td>
+    </tr>`;
+  });
+  html += '</tbody>';
+  document.getElementById('stream-table').innerHTML = html;
+}
+
+// ─── CHARTS ───────────────────────────────────────────────────────────────────
+let pvfChartInst = null;
+
+function buildPvFChart(d) {
+  if (pvfChartInst) pvfChartInst.destroy();
+  const planARR = computePlanARR();
+  const foreARR = computeARR(d);
+  const delta   = foreARR - planARR;
+  const deltaPct = (delta / planARR * 100);
+
+  // Update delta callout
+  const dv = document.getElementById('pvf-delta-val');
+  const dp = document.getElementById('pvf-delta-pct');
+  const sign = delta >= 0 ? '+' : '';
+  dv.textContent = sign + '$' + Math.abs(delta).toFixed(1) + 'M';
+  dv.style.color = delta >= 0 ? 'var(--green)' : 'var(--red)';
+  dp.textContent = sign + deltaPct.toFixed(1) + '% vs. plan';
+
+  const ctx = document.getElementById('pvfChart').getContext('2d');
+  pvfChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Plan ARR', 'Forecast ARR'],
+      datasets: [{
+        data: [planARR, foreARR],
+        backgroundColor: ['#1a4e8a22', delta >= 0 ? '#1a664033' : '#bf2c1a22'],
+        borderColor:     ['#1a4e8a',   delta >= 0 ? '#1a6640'   : '#bf2c1a'],
+        borderWidth: 1.5,
+        borderRadius: 4,
+        barPercentage: 0.55,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => ' $' + c.raw.toFixed(1) + 'M' } },
+        datalabels: { display: false },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10, family: 'IBM Plex Mono' }, color: '#a09d97' } },
+        y: {
+          grid: { color: '#dedad340' },
+          ticks: { font: { size: 10, family: 'IBM Plex Mono' }, color: '#a09d97', callback: v => '$' + v + 'M' },
+          min: Math.min(planARR, foreARR) * 0.96,
+        },
+      },
+    },
+  });
+}
+
+function buildWaterfallChart(d) {
+  if (wfChartInst) wfChartInst.destroy();
+  const pvm = computePVM(d);
+
+  // Only the variance components — own scale, value labels on each bar
+  const labels = ['Renewal\n& Churn', 'New Logo\nVolume', 'ACV\nMix', 'Price\nLift', 'Net\nVariance'];
+  const vals   = [pvm.retEffect, pvm.volEffect, pvm.mixEffect, pvm.priceEffect, pvm.totalVar];
+
+  const bgColors = vals.map((v, i) => {
+    if (i === 4) return v >= 0 ? '#1a4e8a44' : '#bf2c1a33';
+    return v >= 0 ? '#1a664033' : '#bf2c1a33';
+  });
+  const borderColors = vals.map((v, i) => {
+    if (i === 4) return v >= 0 ? '#1a4e8a' : '#bf2c1a';
+    return v >= 0 ? '#1a6640' : '#bf2c1a';
+  });
+
+  // Value label plugin
+  const valueLabelPlugin = {
+    id: 'valueLabels',
+    afterDatasetsDraw(chart) {
+      const { ctx, data, scales } = chart;
+      data.datasets[0].data.forEach((val, i) => {
+        const bar = chart.getDatasetMeta(0).data[i];
+        const x = bar.x;
+        const y = val >= 0 ? bar.y - 6 : bar.y + 16;
+        const sign = val >= 0 ? '+' : '';
+        ctx.save();
+        ctx.font = '500 10px IBM Plex Mono';
+        ctx.fillStyle = val >= 0 ? '#1a6640' : '#bf2c1a';
+        ctx.textAlign = 'center';
+        ctx.fillText(sign + '$' + Math.abs(val).toFixed(1) + 'M', x, y);
+        ctx.restore();
+      });
+    },
+  };
+
+  const ctx = document.getElementById('wfChart').getContext('2d');
+  wfChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: vals,
+        backgroundColor: bgColors,
+        borderColor: borderColors,
+        borderWidth: 1.5,
+        borderRadius: 4,
+        barPercentage: 0.58,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => ' ' + (c.raw >= 0 ? '+' : '') + '$' + c.raw.toFixed(1) + 'M' } },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { size: 10, family: 'IBM Plex Mono' }, color: '#a09d97', maxRotation: 0 },
+        },
+        y: {
+          grid: { color: '#dedad340' },
+          ticks: { font: { size: 10, family: 'IBM Plex Mono' }, color: '#a09d97', callback: v => (v >= 0 ? '+' : '') + '$' + v.toFixed(0) + 'M' },
+        },
+      },
+      layout: { padding: { top: 22 } },
+    },
+    plugins: [valueLabelPlugin],
+  });
+}
+
+function buildMonthlyChart(d) {
+  if (monthlyChartInst) monthlyChartInst.destroy();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const forecast = computeMonthly(d);
+  const planMo   = computePlanMonthly();
+  const ctx = document.getElementById('monthlyChart').getContext('2d');
+  monthlyChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: months,
+      datasets: [
+        {
+          label: 'Forecast',
+          data: forecast,
+          backgroundColor: '#1a4e8a88',
+          borderColor: '#1a4e8a',
+          borderWidth: 1,
+          borderRadius: 3,
+          barPercentage: 0.65,
+        },
+        {
+          type: 'line',
+          label: 'Plan',
+          data: planMo,
+          borderColor: '#a09d9760',
+          borderWidth: 1.5,
+          borderDash: [4, 3],
+          pointRadius: 0,
+          fill: false,
+          tension: 0.3,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => ' $' + (c.raw || 0).toFixed(1) + 'M' } },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10, family: 'IBM Plex Mono' }, color: '#a09d97' } },
+        y: {
+          grid: { color: '#dedad340' },
+          ticks: { font: { size: 10, family: 'IBM Plex Mono' }, color: '#a09d97', callback: v => '$' + Math.round(v) + 'M' },
+        },
+      },
+    },
+  });
+}
+
+function buildPVMChart(d) {
+  if (pvmChartInst) pvmChartInst.destroy();
+  const pvm = computePVM(d);
+  const labels = ['Renewal\n& Churn', 'New Logo\nVolume', 'ACV\nMix', 'Price\nLift', 'Total\nVariance'];
+  const vals = [pvm.retEffect, pvm.volEffect, pvm.mixEffect, pvm.priceEffect, pvm.totalVar];
+  const colors = vals.map((v, i) => {
+    if (i === 4) return '#1a4e8a99';
+    return v >= 0 ? '#1a664055' : '#bf2c1a55';
+  });
+  const borders = vals.map((v, i) => {
+    if (i === 4) return '#1a4e8a';
+    return v >= 0 ? '#1a6640' : '#bf2c1a';
+  });
+
+  const ctx = document.getElementById('pvmChart').getContext('2d');
+  pvmChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: vals,
+        backgroundColor: colors,
+        borderColor: borders,
+        borderWidth: 1.5,
+        borderRadius: 3,
+        barPercentage: 0.6,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => ' ' + (c.raw >= 0 ? '+' : '') + '$' + c.raw.toFixed(1) + 'M' } },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10, family: 'IBM Plex Mono' }, color: '#a09d97', maxRotation: 0 } },
+        y: {
+          grid: { color: '#dedad340' },
+          ticks: { font: { size: 10, family: 'IBM Plex Mono' }, color: '#a09d97', callback: v => (v >= 0 ? '+' : '') + '$' + v.toFixed(0) + 'M' },
+        },
+      },
+    },
+  });
+}
+
+// ─── KPIs ─────────────────────────────────────────────────────────────────────
+function updateKPIs(d) {
+  const arr     = computeARR(d);
+  const planARR = computePlanARR();
+  const delta   = arr - planARR;
+  const deltaPct = (delta / planARR * 100);
+
+  document.getElementById('kpi-arr').textContent = '$' + arr.toFixed(1) + 'M';
+  const arrTag = document.getElementById('kpi-arr-tag');
+  arrTag.textContent = (deltaPct >= 0 ? '↑ +' : '↓ ') + Math.abs(deltaPct).toFixed(1) + '% vs. plan';
+  arrTag.className = 'kpi-tag ' + (deltaPct >= 0 ? 'pos' : 'neg');
+  document.querySelector('.kpi.pos, .kpi')?.classList.toggle('neg', deltaPct < 0);
+
+  // NRR = (renewal + expansion - churn) / baseARR
+  const nrr = ((PLAN.baseARR * d.renewalRate / 100 + PLAN.baseARR * d.renewalRate / 100 * d.expansionRate / 100 - PLAN.baseARR * d.churnRate / 100) / PLAN.baseARR * 100);
+  document.getElementById('kpi-nrr').textContent = nrr.toFixed(1) + '%';
+  const nrrTag = document.getElementById('kpi-nrr-tag');
+  nrrTag.textContent = nrr >= 110 ? '↑ Best-in-class' : nrr >= 100 ? '↑ Healthy' : '↓ Below 100%';
+  nrrTag.className   = 'kpi-tag ' + (nrr >= 110 ? 'pos' : nrr >= 100 ? 'warn' : 'neg');
+
+  const newRev = d.newLogos * d.acv / 1000;
+  const planNew = PLAN.newLogos * PLAN.acv / 1000;
+  document.getElementById('kpi-new').textContent = '$' + newRev.toFixed(1) + 'M';
+  const newTag = document.getElementById('kpi-new-tag');
+  const newDelta = ((newRev - planNew) / planNew * 100);
+  newTag.textContent = (newDelta >= 0 ? '↑ +' : '↓ ') + Math.abs(newDelta).toFixed(1) + '% vs. plan';
+  newTag.className   = 'kpi-tag ' + (newDelta >= 0 ? 'pos' : 'neg');
+
+  const gdp = macro.gdp ?? 2.8;
+  const conf = gdp >= 2.5 ? 'High' : gdp >= 1.5 ? 'Medium' : 'Low';
+  document.getElementById('kpi-conf').textContent = conf;
+  document.getElementById('kpi-conf-tag').textContent = 'GDP ' + gdp.toFixed(1) + '% · ' + (conf === 'High' ? 'favorable' : conf === 'Medium' ? 'neutral' : 'headwind');
+}
+
+// ─── RECALC ───────────────────────────────────────────────────────────────────
+function recalc() {
+  const d = drivers();
+  updateLabels();
+  updateKPIs(d);
+  buildPvFChart(d);
+  buildWaterfallChart(d);
+  buildMonthlyChart(d);
+  buildPVMChart(d);
+  buildSensitivity();
+  buildStreamTable(d);
+}
+
+// ─── FRED ─────────────────────────────────────────────────────────────────────
+async function fetchFRED(id) {
+  try {
+    const r = await fetch(`https://api.stlouisfed.org/fred/series/observations?series_id=${id}&api_key=abcdef1234567890abcdef1234567890&file_type=json&sort_order=desc&limit=3`);
+    const j = await r.json();
+    const v = parseFloat(j.observations?.[0]?.value);
+    return isNaN(v) ? null : v;
+  } catch { return null; }
+}
+
+async function loadMacro() {
+  const [gdp, ppi, tech, ffr] = await Promise.all([
+    fetchFRED('A191RL1Q225SBEA'),
+    fetchFRED('PCU511210511210'),
+    fetchFRED('CES6054000001'),
+    fetchFRED('FEDFUNDS'),
+  ]);
+
+  macro.gdp  = gdp  ?? 2.8;
+  macro.ppi  = ppi  ?? 4.1;
+  macro.tech = tech ?? 6182;
+  macro.ffr  = ffr  ?? 5.33;
+
+  const live = gdp !== null || ppi !== null;
+  document.getElementById('hdr-fred').textContent = live ? '✓ FRED · live' : '✓ FRED · cached';
+
+  const gdpEl = document.getElementById('m-gdp');
+  gdpEl.textContent = macro.gdp.toFixed(1) + '%';
+  gdpEl.className   = 'macro-v ' + (macro.gdp >= 2 ? 'up' : 'dn');
+
+  document.getElementById('m-ppi').textContent  = '+' + macro.ppi.toFixed(1) + '%';
+  document.getElementById('m-tech').textContent = (macro.tech / 1000).toFixed(1) + 'M';
+  document.getElementById('m-ffr').textContent  = macro.ffr.toFixed(2) + '%';
+
+  recalc();
+}
+
+// ─── GROQ COMMENTARY ─────────────────────────────────────────────────────────
+async function generateCommentary() {
+  const btn  = document.getElementById('gen-btn');
+  const text = document.getElementById('commentary-text');
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+  text.className = 'commentary-loading';
+  text.textContent = 'Analyzing drivers and macro environment…';
+
+  const d    = drivers();
+  const pvm  = computePVM(d);
+  const arr  = computeARR(d);
+  const plan = computePlanARR();
+
+  try {
+    const r = await fetch('/api/commentary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        drivers: {
+          renewalRate: d.renewalRate,   renewalRatePlan: PLAN.renewalRate,
+          newLogos: d.newLogos,         newLogosPlan: PLAN.newLogos,
+          acv: d.acv,                   acvPlan: PLAN.acv,
+          expansionRate: d.expansionRate, expansionRatePlan: PLAN.expansionRate,
+        },
+        variance: {
+          total: arr - plan,
+          pct: (arr - plan) / plan * 100,
+          volume: pvm.volEffect,
+          price: pvm.priceEffect,
+          mix: pvm.mixEffect,
+        },
+        macro: { gdp: macro.gdp, ppi: macro.ppi, tech: (macro.tech / 1000).toFixed(1) },
+      }),
+    });
+    const j = await r.json();
+    text.className  = 'commentary-text';
+    text.textContent = j.commentary || 'No commentary returned.';
+  } catch {
+    text.className  = 'commentary-text';
+    text.textContent = 'Commentary service unavailable. Check Groq API key in Vercel environment variables.';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<svg viewBox="0 0 12 12" style="width:12px;height:12px;fill:white"><path d="M6 0L7.5 4.5L12 6L7.5 7.5L6 12L4.5 7.5L0 6L4.5 4.5Z"/></svg> Generate FP&A Commentary';
+}
+
+// ─── TIME ─────────────────────────────────────────────────────────────────────
+function tick() {
+  const n = new Date();
+  document.getElementById('hdr-time').textContent =
+    n.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+tick();
+
+// ─── WIRE SLIDERS ─────────────────────────────────────────────────────────────
+['sl-renewal','sl-logos','sl-acv','sl-expansion','sl-churn','sl-price'].forEach(id => {
+  document.getElementById(id).addEventListener('input', recalc);
+});
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+loadMacro();
+</script>
+</body>
+</html>
